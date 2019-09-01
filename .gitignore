@@ -1,1 +1,7 @@
 *.log
+Blood_Pressure_Readings.csv
+Blood_Pressure_ReadingsTEST.csv
+.project
+.pydevproject
+Untitled.ipynb
+.ipynb_checkpoints/
