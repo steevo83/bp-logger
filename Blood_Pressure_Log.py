@@ -6,11 +6,10 @@ Created on Mar 14, 2019
 #*** Using Omron HEM-RML31 cuff for getting BP/Pulse results, digital scale for weight measurements***
 
 #TESTING GIT
+# Want to add individual results -- Create new DB for new users and edit personal ones for returning users.
 
 
 import time as tm
-import pandas as pd
-pd.set_option("display.max_columns", 20)
 import statistics as st
 import datetime as dt
 import matplotlib.pyplot as plt
@@ -20,6 +19,10 @@ from matplotlib import style
 #from pytz.reference import Eastern
 from pytz import timezone
 from tzlocal import get_localzone
+import pandas as pd
+from astropy.wcs.docstrings import bp
+from twisted.conch.test.test_helper import HEIGHT
+pd.set_option("display.max_columns", 20)
 #import re
 
 style.use('fivethirtyeight')
@@ -28,7 +31,8 @@ style.use('fivethirtyeight')
 dob=input("Date of Birth: ")'''
 
 
-users = {'Steven Ormosi': 'Blood_Pressure_Readings.csv'}
+source = 'Blood_Pressure_Readings.csv'
+users = {'Steven Ormosi': source}
 bp_reading = {'DateTime':[],
               'Systolic':[],
               'Diastolic':[],
@@ -40,7 +44,7 @@ bp_reading = {'DateTime':[],
 am_bp = []
 pm_bp = []
 
-master = pd.read_csv('Blood_Pressure_Readings.csv')
+master = pd.read_csv(source)
 master = master.set_index('DateTime', drop=False)
 
 '''def update():
@@ -128,7 +132,7 @@ class bp_reader(object):
                 if(y_n.lower() == 'y' or y_n.lower() == 'yes'):
                     if(chosen == "Systolic" or chosen == "Diastolic" or chosen == "Pulse" or chosen == "Weight"):
                         try:
-                            swapint = int(swap)
+                            swapint = float(swap)
                             bp_reading[chosen][adjint] = swapint
                             print(bp_reading[chosen][adjint])
 
@@ -145,7 +149,7 @@ class bp_reader(object):
                     df = pd.DataFrame(bp_reading)
                     df.set_index('DateTime', inplace=True)
                     df.fillna(value="", inplace=True)
-                    df.to_csv('Blood_Pressure_Readings.csv')
+                    df.to_csv(source)
                     self.main()
 
                 #NOT UPDATING AFTER COMPLETION#
@@ -210,7 +214,7 @@ class bp_reader(object):
             df = pd.DataFrame(bp_reading)
             df.set_index('DateTime', inplace=True)
             df.fillna(value="", inplace=True)
-            df.to_csv('Blood_Pressure_Readings.csv')
+            df.to_csv(source)
             print(df.tail(20))
             tm.sleep(2)
             self.main()
@@ -218,13 +222,25 @@ class bp_reader(object):
             self.main()
 
     def info(self):
-        print("Low Blood Pressure (Hypotension): <90 Systolic OR <60 Diastolic")
-        print("Normal Blood Pressure: 90-120 Systolic AND 60-80 Diastolic")
-        print("Prehypertension: 120-139 Systolic OR 80-89 Diastolic")
-        print("High Blood Pressure (Hypertension Stage 1): 140-159 Systolic OR 90-99 Diastolic")
-        print("High Blood Pressure (Hypertension Stage 2): >160 Systolic OR >100 Diastolic")
-        print("High Blood Pressure Crisis (Seek Emergency Care): >180 Systolic OR  >110 Diastolic")
+        print("\n## BLOOD PRESSURE INFORMATION ##\n")
+        print("    Low Blood Pressure (Hypotension): <90 Systolic OR <60 Diastolic")
+        print("    Normal Blood Pressure: 90-120 Systolic AND 60-80 Diastolic")
+        print("    Prehypertension: 120-139 Systolic OR 80-89 Diastolic")
+        print("    High Blood Pressure (Hypertension Stage 1): 140-159 Systolic OR 90-99 Diastolic")
+        print("    High Blood Pressure (Hypertension Stage 2): >160 Systolic OR >100 Diastolic")
+        print("    High Blood Pressure Crisis (Seek Emergency Care): >180 Systolic OR  >110 Diastolic")
         tm.sleep(2)
+        print("\n## HEART RATE/PULSE INFORMATION ##")
+        print('''\n    A normal resting heart rate for adults ranges from 60 to 100 beats per minute.
+    Generally, a lower heart rate at rest implies more efficient heart function and better cardiovascular fitness. 
+    For example, a well-trained athlete might have a normal resting heart rate closer to 40 beats per minute.''')
+        tm.sleep(2)
+        print("\n## BMI/WEIGHT INFORMATION ##")
+        print('''
+    If your BMI is less than 18.5, it falls within the underweight range.
+    If your BMI is 18.5 to 24.9, it falls within the normal or Healthy Weight range.
+    If your BMI is 25.0 to 29.9, it falls within the overweight range.
+    If your BMI is 30.0 or higher, it falls within the obese range.\n''')
         self.main()
 
     def Weight(self):
@@ -344,15 +360,74 @@ class bp_reader(object):
             self.main()
         tm.sleep(2)
         self.avg()
+        
+    def bmiCalc(self, height):
+        return round((bp_reading['Weight'][-1] / height**2)*703, 2)
+    
+    def bmiClass(self, bmi):
+        if bmi < 18.5:
+            return "underweight"
+        elif bmi >= 18.5 and bmi < 25:
+            return "healthy weight"
+        elif bmi >= 25 and bmi < 30:
+            return "overweight"
+        elif bmi >= 30:
+            return "obese"
+        else:
+            raise ValueError
+        
+    def weightToLose(self, height):
+        #heightInt = int(height)
+        bmiActual = self.bmiCalc(height)
+        classActual = self.bmiClass(bmiActual)
+        weightActual = bp_reading['Weight'][-1]
+        obeseUp = (30*(height**2))/703
+        overweightUp = (25*(height**2))/703
+        healthyUp = (18.5*(height**2))/703
+        underweightDown = (18.5*(height**2))/703
+        healthyDown = (24.9*(height**2))/703
+        overweightDown =  (29.9*(height**2))/703
+        if classActual == "obese":
+            print(f'Lose {round(weightActual-overweightDown, 2)} lbs to achieve "overweight".')
+            print(f'Lose {round(weightActual-healthyDown, 2)} lbs to achieve "healthy weight".')
+            print(f'If you lose {round(weightActual-underweightDown, 2)} lbs you will be "underweight".')
+        if classActual == "overweight":
+            print(f'Lose {round(weightActual-healthyDown, 2)} lbs to achieve "healthy weight".')
+            print(f'Lose {round(weightActual-underweightDown, 2)} lbs and you will be "underweight".')
+            print(f'If you gain {round(obeseUp - weightActual, 2)} lbs you will be "obese"')
+        if classActual == "healthy weight":
+            print(f'If you lose {round(weightActual-underweightDown, 2)} lbs you will be "underweight".')
+            print(f'If you gain {round(overweightUp-weightActual, 2)} lbs you will be "overweight".')
+            print(f'If you gain {round(obeseUp-weightActual, 2)} lbs you will be "obese".')
+        if classActual == "underweight":
+            print(f'Gain {round(healthyUp-weightActual, 2)} lbs to achieve "healthy weight".')
+            print(f'If you gain {round(overweightUp-weightActual, 2)} lbs you will be "overweight".')
+            print(f'If you gain {round(obeseUp-weightActual, 2)} lbs you will be "obese".')
+        tm.sleep(2)
+        print('''
+    *** Remember that these are only guidelines and everyone's body is different. ***
+        ''')
+            
+    ## Add calculations to show how many lbs needed to lose (or gain) to get to "healthy weight" ##
+    
+    def bmi(self):
+        hInput = input("What is your height in inches?  ")
+        bmiActual = self.bmiCalc(int(hInput))
+        print(f'Based on your previous weight measurement, your current BMI is: {bmiActual}, which is {self.bmiClass(bmiActual)}.\n')
+        self.weightToLose(int(hInput))
+        tm.sleep(2)
+        self.main()
+    
 
     def main(self):
         #update()
         print("Welcome to your Blood Pressure Helper! \n")
         tm.sleep(1)
-        print("[1] Enter a record")
+        print("[1] Enter a Record")
         print("[2] View Averages")
-        print("[3] See Blood Pressure information")
-        print("[4] Modify an Old Entry [UNDER CONSTRUCTION]")
+        print("[3] See Health Information")
+        print("[4] Modify an Old Entry")
+        print("[5] Calculate my BMI")
         choice=input("\n What would you like to do? ")
         if (choice == '1'):
             self.reading()
@@ -362,6 +437,8 @@ class bp_reader(object):
             self.info()
         elif (choice == '4'):
             self.Mod()
+        elif (choice == '5'):
+            self.bmi()
         else:
             print("Invalid choice.")
             self.main()
@@ -373,4 +450,4 @@ reader.main()
 
 
 
-#df.to_csv('Blood_Pressure_Readings.csv')
+#df.to_csv(source)
